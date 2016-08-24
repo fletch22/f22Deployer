@@ -1,0 +1,11 @@
+{
+  "parser": "babel-eslint",
+  "extends": "airbnb",
+  "rules": {
+    "no-multiple-empty-lines": [2, {"max": 2, "maxEOF": 2}],
+    "max-len": [2, 175, 2],
+    "no-console": [0],
+    "comma-dangle": [2, "never"],
+    "no-trailing-spaces": [0]
+  }
+}

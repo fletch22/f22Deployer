@@ -1,32 +1,11 @@
-import config from './config/config';
-import FileSender from './FileSender';
 import tarPack from 'tar-pack';
 import pathExists from 'path-exists';
-import del from 'delete';
 import fs from 'fs';
+import del from 'delete';
+import config from './config/config';
+import FileSender from './FileSender';
 
 const sshConfig = config.ServerInfo.SshConfig.LocalVagrant;
-
-// const PodInstallationManual = {
-//   PreTransferScripts: [
-//     `sudo chown -R f22 ${sshConfig.loadingDockPath}`,
-//     `rm -rf ${sshConfig.loadingDockPath}`,
-//     `mkdir -p ${sshConfig.path}`
-//   ],
-//   TransferDetails: {
-//     loadingDock: {
-//       path: '',
-//       folderToCreate: ''
-//     }
-//   },
-//   PostTransferScripts: [
-//     `cd ${sshConfig.path} && tar -xmf ${destTarPath}`,
-//     'docker rmi -f f22website',
-//     'docker rm -f f22website',
-//     `cd ${destExtracted} && source ./build.sh`,
-//     `cd ${destExtracted} && source ./run.sh`
-//   ]
-// };
 
 class Deployer {
 

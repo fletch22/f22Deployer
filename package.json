@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "b": "rimraf ./dist; babel ./app -d ./dist",
-    "start": "node ./dist/deploy.js",
+    "start": "node ./dist/deployAndBuildInVagrant.js",
     "test": "mocha ./dist/__tests__"
   },
   "author": "fletch22",
@@ -23,6 +23,7 @@
     "path": "^0.12.7",
     "path-exists": "^3.0.0",
     "scp2": "^0.5.0",
+    "ssh2": "^0.5.0",
     "tar-pack": "^3.1.4",
     "whatwg-fetch": "^1.0.0"
   },

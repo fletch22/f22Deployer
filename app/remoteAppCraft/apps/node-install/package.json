@@ -1,0 +1,15 @@
+{
+  "name": "node-installer",
+  "version": "1.0.0",
+  "description": "Installs Tarred Docker Instances",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "installAndRun": "npm i && npm start"
+  },
+  "author": "Fletch22",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "shelljs": "^0.7.4"
+  }
+}

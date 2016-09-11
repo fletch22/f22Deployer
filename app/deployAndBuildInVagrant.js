@@ -13,15 +13,16 @@ const shippingPackageFileName = `${appName}.tar`;
 const localShippingPackageFile = path.join(localLoadingDock, shippingPackageFileName);
 const remoteLoadingDockPath = sshConfig.path;
 const remoteShippingPackageFilePath = path.join(remoteLoadingDockPath, shippingPackageFileName);
-const remoteDockerPath = path.join(remoteLoadingDockPath, 'fletch22Website', 'docker');
 
 const conn1 = new SshClient();
 
 conn1.on('ready', () => {
   console.log('Command array execution ready ...');
 
+  const dockerComposePath = '/vagrant/workspaces/docker/docker-compose';
+
   let commands = [
-    'docker stop f22website',
+    `cd ${dockerComposePath}; docker-compose stop`,
     `mkdir -p ${sshConfig.loadingDockPath}`,
     `sudo chown -R f22 ${sshConfig.loadingDockPath}`,
     `rm -rf ${sshConfig.loadingDockPath}`,
@@ -33,18 +34,19 @@ conn1.on('ready', () => {
   remoteCommandExecutor.execute().then(() => {
     const deployer = new Deployer(localLoadingDock, localShippingPackageFile, projectPath);
 
+    console.log(`RSPFP: ${remoteShippingPackageFilePath}`);
+
     deployer.deploy().then(() => {
       commands = [
         `cd ${sshConfig.path} && tar -xmf ${remoteShippingPackageFilePath}`,
         'docker rmi -f f22website',
-        'docker rm -f f22website',
-        `cd ${remoteDockerPath} && source ./build.sh`,
-        `cd ${remoteDockerPath} && source ./run.sh`
+        `cd ${dockerComposePath}; docker-compose rm -f`,
+        `cd ${dockerComposePath}; ./dc.sh`
       ];
 
-      // new RemoteCommandExecutor(conn1, commands).execute().then(() => {
-      //   conn1.end(); // close parent (and this) connection
-      // });
+      new RemoteCommandExecutor(conn1, commands).execute().then(() => {
+        conn1.end(); // close parent (and this) connection
+      });
     });
   });
 }).on('error', (error) => {

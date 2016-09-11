@@ -3,7 +3,7 @@ import pathExists from 'path-exists';
 import fs from 'fs';
 import del from 'delete';
 import config from './config/config';
-import FileSender from './FileSender';
+import FileSender from './sender/FileSender';
 
 const sshConfig = config.ServerInfo.SshConfig.LocalVagrant;
 

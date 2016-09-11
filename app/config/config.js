@@ -13,13 +13,16 @@ const Config = {
         username: 'f22',
         loadingDockPath,
         path: stagingPath,
-        privateKey: fs.readFileSync('/Users/fletch22/.ssh/remote-deploy')
+        privateKey: fs.readFileSync('/Users/fletch22/.ssh/remote-deploy', 'utf-8') // Passing as buffer does not work. FileSync is not creating an object recognized as a buffer.
       },
-      host: '104.236.252.246',
       DigitalOcean: {
-        port: '22',
+        host: '104.236.252.246',
         username: 'fletch22',
-        password: 'iwaglmlah'
+        path: '/tmp/bar',
+        port: '22',
+        privateKey: fs.readFileSync('/Users/fletch22/.ssh/id_rsa', 'utf-8'), // Passing as buffer does not work. FileSync is not creating an object recognized as a buffer.
+        forceIPv4: true,
+        tryKeyboard: false
       }
     }
   }

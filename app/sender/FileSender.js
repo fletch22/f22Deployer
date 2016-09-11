@@ -20,8 +20,8 @@ class FileSender {
     console.log('Beginning deploy ...');
 
     this.client.on('connect', () => {
-      spinner.stop(true);
       console.log('SCP Connected.');
+      spinner.stop(true);
       spinner = new Spinner('Deploying files %s        ');
       spinner.setSpinnerString(18);
       spinner.start();
@@ -43,9 +43,18 @@ class FileSender {
       const end = moment();
 
       console.log('Closing connection.');
-      console.log(`Deploy operation took ${moment.preciseDiff(start, end)}.`);
+      console.log(`Send operation took ${moment.preciseDiff(start, end)}.`);
 
       resolve();
+    });
+
+    let milestone = 0.01;
+    this.client.on('transfer', (buffer, uploaded, total) => {
+      const percentComplete = (uploaded/total) * 100;
+      if (percentComplete > milestone) {
+        milestone += milestone;
+        spinner.setSpinnerTitle(`Transferred ${percentComplete.toFixed(2)}%`);
+      }
     });
 
     console.log(`Preparing to SCP '${folderWithContentsToSend}' to '${this.sshConfig.path}'.`);

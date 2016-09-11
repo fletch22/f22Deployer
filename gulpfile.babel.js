@@ -7,7 +7,11 @@ gulp.task('scripts', () => gulp.src('./app/**/*.js')
 );
 
 gulp.task('watch', () => {
-  gulp.watch('./app/**/*.js', ['scripts']);
+  gulp.watch([
+    './app/**/*.js',
+    '!./app/remoteAppCraft'
+  ],
+    ['scripts']);
 });
 
 gulp.task('default', ['scripts', 'watch']);

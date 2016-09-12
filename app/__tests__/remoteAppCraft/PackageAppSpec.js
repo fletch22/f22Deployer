@@ -1,12 +1,11 @@
 import path from 'path';
 import { expect } from 'chai';
 import PackageApp from '../../remoteAppCraft/PackageApp';
-import tar from 'tar';
 
 describe('Given the PackageAppSpec', () => {
   it('Then it should package an app correctly', () => {
 
-    const folderPath = path.resolve(__dirname, '../../../app/remoteAppCraft/apps/node-install');
+    const folderPath = path.resolve(__dirname, '../../../app/remoteAppCraft/apps/install-containers');
 
     console.log(folderPath);
 

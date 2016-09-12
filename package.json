@@ -21,9 +21,12 @@
     "del": "^2.2.2",
     "delete": "^0.3.2",
     "es6-promise": "^3.2.1",
+    "fs-extra": "^0.30.0",
     "fstream": "^1.0.10",
     "gulp": "^3.9.1",
     "gulp-babel": "^6.1.2",
+    "lodash": "^4.15.0",
+    "mkdirp": "^0.5.1",
     "moment": "^2.14.1",
     "moment-precise-range-plugin": "^1.2.0",
     "path": "^0.12.7",
@@ -32,7 +35,8 @@
     "ssh2": "^0.5.1",
     "tar": "^2.2.1",
     "tar-pack": "^3.1.4",
-    "whatwg-fetch": "^1.0.0"
+    "whatwg-fetch": "^1.0.0",
+    "winston": "^2.2.0"
   },
   "devDependencies": {
     "karma": "^1.2.0",

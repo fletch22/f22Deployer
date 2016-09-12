@@ -12,16 +12,17 @@ class PackageApp {
   }
 
   cleanStagingFolder() {
-    const globPath = path.join(this.stagingPath, '*');
+    const globPath = path.join(this.stagingPath, '*'); // Removes files
     del.sync([globPath]);
   }
 
   cleanApp() {
-    const globPath = path.join(this.folderPath, 'node_modules', '**');
+    const globPath = path.join(this.folderPath, 'node_modules', '**'); // Remove folder
     del.sync([globPath]);
   }
 
   package() {
+    this.cleanApp();
     this.cleanStagingFolder();
 
     const outputPath = path.join(this.stagingPath, `${path.basename(this.folderPath)}.tar`);

@@ -4,6 +4,8 @@ import fs from 'fs';
 import fsExtra from 'fs-extra';
 import path from 'path';
 import mkdirp from 'mkdirp';
+import del from 'del';
+import Q from 'q';
 import { Client as SshClient } from 'ssh2';
 import Config from '../config/config.js';
 import RemoteCommandExecutor from '../RemoteCommandExecutor';
@@ -22,6 +24,7 @@ class RemotePackager {
     const relativeExportPath = path.join(relativeDockerComposePath, 'export');
 
     this.localStagingPath = path.join(localMontrealRoot, relativeExportPath, stagingFolderName);
+    this.localExportAppsPath = path.join(this.localStagingPath, 'apps');
 
     this.dockerComposePath = path.join(vagrantMontrealVolumeShareRoot, relativeDockerComposePath);
     this.exportPath = path.join(vagrantMontrealVolumeShareRoot, relativeExportPath);
@@ -47,6 +50,7 @@ class RemotePackager {
     if (!fs.existsSync(appPath)) {
       throw new Error(`Was trying to find app '${appName}' but could not find it. Looked in ${this.appsPath}. Not there.`);
     }
+
     return appPath;
   }
 
@@ -59,24 +63,44 @@ class RemotePackager {
   usherAppsToStaging() {
     this.expectExists(this.localStagingPath);
 
-    const exportAppsPath = path.join(this.localStagingPath, 'apps');
-    mkdirp(exportAppsPath);
+    const glob = path.join(this.localExportAppsPath, '*');
+    del.sync(glob, { force: true });
+    mkdirp(this.localExportAppsPath);
+
+    const promises = [];
 
     this.preppedAppPaths.forEach((filePath) => {
       this.expectExists(filePath);
-      try {
-        const destPath = path.join(exportAppsPath, path.basename(filePath));
-        logger.debug(`Copying ${filePath} to ${destPath}`);
-        fsExtra.copySync(filePath, destPath);
-      } catch (error) {
-        logger.error(`Encountered error copying file: ${error.stack}`);
+      console.log(filePath);
+      const destPath = path.join(this.localExportAppsPath, path.basename(filePath));
+      if (fs.existsSync(destPath)) {
+        logger.info(`Deleting ${destPath}`);
+        del.sync(destPath, { force: true });
       }
+      logger.info(`Copying ${filePath} to ${destPath}`);
+
+      const promise = new Promise((resolve, reject) => {
+        try {
+          fsExtra.copy(filePath, destPath, (error) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve();
+            }
+          });
+        } catch (error) {
+          logger.error(`Encountered error copying file: ${error.stack}`);
+        }
+      });
+      promises.push(promise);
     });
+
+    return Q.all(promises);
   }
 
   addApps() {
     this.prepApp('install-containers');
-    this.usherAppsToStaging();
+    return this.usherAppsToStaging();
   }
 
   transferStep1(conn1) {
@@ -89,35 +113,39 @@ class RemotePackager {
 
     const remoteCommandExecutor = new RemoteCommandExecutor(conn1, commands);
     remoteCommandExecutor.execute()
-    .then(() => {
-      try {
-        this.transferStep2(conn1);
-      } catch (error) {
-        logger.error(error.stack);
-        conn1.end();
-      }
-    })
-    .catch((error) => {
-      throw new Error(error.stack);
-    });
+      .then(() => {
+        try {
+          this.transferStep2(conn1);
+        } catch (error) {
+          logger.error(error.stack);
+          conn1.end();
+        }
+      })
+      .catch((error) => {
+        throw new Error(error.stack);
+      });
   }
 
   transferStep2(conn1) {
-    const podPath = path.join(this.exportPath, 'pods');
+    // const podPath = path.join(this.exportPath, 'pods');
     logger.debug('About to add apps.');
-    this.addApps();
+    const promise = this.addApps();
 
-    logger.debug('About to compose commands.');
-    const innerCommands = [
-      `sudo cp ${this.dockerComposePath}/docker-compose.yml ${this.stagingPath}`, // Copy docker-compose.yml to staging
-      'echo \'Done copying.\'', // Copy apps (if any) to staging
-      `ls ${podPath} -l`
-    ];
+    promise.then(() => {
+      logger.debug('About to compose commands.');
+      const innerCommands = [
+        `sudo cp ${this.dockerComposePath}/docker-compose.yml ${this.stagingPath}`, // Copy docker-compose.yml to staging
+        'echo \'Done copying.\'', // Copy apps (if any) to staging
+        'su vagrant; whoami',
+        `cd ${this.stagingPath}/apps; cat *.tar | tar -xvf - -i`
+      ];
+      // `ls ${podPath} -l`
 
-    logger.debug('About to attempt to connect again.');
-    const rExec = new RemoteCommandExecutor(conn1, innerCommands);
-    rExec.execute().then(() => {
-      conn1.end(); // close parent (and this) connection
+      logger.debug('About to attempt to connect again.');
+      const rExec = new RemoteCommandExecutor(conn1, innerCommands);
+      rExec.execute().then(() => {
+        conn1.end(); // close parent (and this) connection
+      });
     });
   }
 
@@ -130,7 +158,7 @@ class RemotePackager {
       logger.error(`Error: ${error.level}: ${error.message}`);
       conn1.end();
     }).on('end', () => {
-      logger.error('End.');
+      logger.info('End.');
     })
       .connect(this.sshConfig);
   }

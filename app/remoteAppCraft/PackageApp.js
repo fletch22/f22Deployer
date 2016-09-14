@@ -3,6 +3,7 @@ import fstream from 'fstream';
 import fs from 'fs';
 import path from 'path';
 import del from 'del';
+import logger from '../logging/Logger';
 
 class PackageApp {
 
@@ -28,6 +29,8 @@ class PackageApp {
     const outputPath = path.join(this.stagingPath, `${path.basename(this.folderPath)}.tar`);
 
     const dirDest = fs.createWriteStream(outputPath);
+
+    logger.info(outputPath);
 
     function onError(err) {
       console.error('An error occurred:', err);

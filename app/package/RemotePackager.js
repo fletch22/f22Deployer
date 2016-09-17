@@ -27,11 +27,18 @@ class RemotePackager {
     this.localExportAppsPath = path.join(this.localStagingPath, 'apps');
 
     this.dockerComposePath = path.join(vagrantMontrealVolumeShareRoot, relativeDockerComposePath);
-    this.exportPath = path.join(vagrantMontrealVolumeShareRoot, relativeExportPath);
-    this.stagingPath = path.join(this.exportPath, stagingFolderName);
+    this.vagrantMontrealExportPath = path.join(vagrantMontrealVolumeShareRoot, relativeExportPath);
+    this.vagrantMontrealStagingPath = path.join(this.vagrantMontrealExportPath, stagingFolderName);
+    this.vagMontStagAppsPath = path.join(this.vagrantMontrealStagingPath, 'apps');
 
     this.appsPath = path.resolve(__dirname, '../../app/remoteAppCraft/apps');
     this.preppedAppPaths = [];
+
+    this.appNames = {
+      InstallContainers: {
+        folderName: 'install-containers'
+      }
+    };
   }
 
   expectExists(resourcePath) {
@@ -57,27 +64,32 @@ class RemotePackager {
   prepApp(appName) {
     const appPath = this.getAppPath(appName);
     const packageApp = new PackageApp(appPath);
-    this.preppedAppPaths.push(packageApp.package());
+
+    return packageApp.package()
+      .then((outputPath) => {
+        this.preppedAppPaths.push(outputPath);
+        return Promise.resolve();
+      });
   }
 
   usherAppsToStaging() {
-    this.expectExists(this.localStagingPath);
+    logger.debug(`About to expect exists: ${this.localStagingPath}`);
 
-    const glob = path.join(this.localExportAppsPath, '*');
-    del.sync(glob, { force: true });
-    mkdirp(this.localExportAppsPath);
+    this.expectExists(this.localStagingPath);
 
     const promises = [];
 
     this.preppedAppPaths.forEach((filePath) => {
+      logger.debug(`About to expect prepped path exists: ${filePath}`);
       this.expectExists(filePath);
-      console.log(filePath);
+
       const destPath = path.join(this.localExportAppsPath, path.basename(filePath));
+
       if (fs.existsSync(destPath)) {
-        logger.info(`Deleting ${destPath}`);
+        logger.debug(`Deleting ${destPath}`);
         del.sync(destPath, { force: true });
       }
-      logger.info(`Copying ${filePath} to ${destPath}`);
+      logger.debug(`Copying ${filePath} to ${destPath}`);
 
       const promise = new Promise((resolve, reject) => {
         try {
@@ -90,6 +102,7 @@ class RemotePackager {
           });
         } catch (error) {
           logger.error(`Encountered error copying file: ${error.stack}`);
+          throw new Error(error);
         }
       });
       promises.push(promise);
@@ -99,15 +112,18 @@ class RemotePackager {
   }
 
   addApps() {
-    this.prepApp('install-containers');
-    return this.usherAppsToStaging();
+    return this.prepApp(this.appNames.InstallContainers.folderName)
+    .then(() => {
+      logger.debug('About to usher apps to staging.');
+      return this.usherAppsToStaging();
+    });
   }
 
   transferStep1(conn1) {
     logger.debug('Command array execution ready ...');
 
     const commands = [
-      'echo \'About to start export\''
+      'echo \'About to start export ...\''
     ];
     // `cd ${this.exportPath}; sudo ./e.sh`,
 
@@ -127,26 +143,28 @@ class RemotePackager {
   }
 
   transferStep2(conn1) {
-    // const podPath = path.join(this.exportPath, 'pods');
+    const podPath = path.join(this.vagrantMontrealExportPath, 'pods');
     logger.debug('About to add apps.');
     const promise = this.addApps();
 
     promise.then(() => {
       logger.debug('About to compose commands.');
       const innerCommands = [
-        `sudo cp ${this.dockerComposePath}/docker-compose.yml ${this.stagingPath}`, // Copy docker-compose.yml to staging
-        'echo \'Done copying.\'', // Copy apps (if any) to staging
-        'su vagrant; whoami',
-        `cd ${this.stagingPath}/apps; cat *.tar | tar -xvf - -i`
+        `sudo cp ${this.dockerComposePath}/docker-compose.yml ${this.stagingPath}`,//Copy docker-compose.yml to staging
+        `cd ${this.vagMontStagAppsPath}; cat *.tar | tar -xvf - -i`,
+        `ls ${podPath} -l`,
+        `cd ${this.vagMontStagAppsPath}/install-containers; npm install`
       ];
-      // `ls ${podPath} -l`
 
       logger.debug('About to attempt to connect again.');
       const rExec = new RemoteCommandExecutor(conn1, innerCommands);
       rExec.execute().then(() => {
         conn1.end(); // close parent (and this) connection
       });
-    });
+    })
+      .catch((error) => {
+        logger.error(error.stack);
+      });
   }
 
   package() {

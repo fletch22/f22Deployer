@@ -3,6 +3,7 @@ import path from 'path';
 import { Client as SshClient } from 'ssh2';
 import RemoteCommandExecutor from '../RemoteCommandExecutor';
 import Config from '../config/config';
+import StartupArguments from '../util/StartupArguments';
 
 class RemoteInstaller {
 
@@ -12,6 +13,26 @@ class RemoteInstaller {
 
     console.log(`Got this far....${podInfo.containers.length}`);
     this.podInfo = podInfo;
+  }
+
+  getRemoteAppInstallScriptCommands() {
+    const commands = [];
+    const appName = 'install-containers';
+
+    const cleanInstall = StartupArguments.wasArgumentUsed('installRemoteNodeApp');
+    if (cleanInstall) {
+      commands.push(`rm -rf ${this.vagMontStagAppsPath}/${appName}`);
+    }
+
+    commands.push(`cd ${this.vagMontStagAppsPath}; cat *.tar | tar -xvf - -i`);
+
+    let optionalScript = '';
+    if (cleanInstall) {
+      optionalScript = ' npm install;';
+    }
+    commands.push(`cd ${this.vagMontStagAppsPath}/${appName}; ${optionalScript} npm start`);
+
+    return commands;
   }
 
   install() {

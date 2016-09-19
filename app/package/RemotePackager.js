@@ -1,16 +1,12 @@
 import 'moment-precise-range-plugin';
-import _ from 'lodash';
-import fs from 'fs';
-import fsExtra from 'fs-extra';
 import path from 'path';
-import mkdirp from 'mkdirp';
-import del from 'del';
-import Q from 'q';
 import { Client as SshClient } from 'ssh2';
 import Config from '../config/config.js';
 import RemoteCommandExecutor from '../RemoteCommandExecutor';
-import PackageApp from '../remoteAppCraft/PackageApp';
 import logger from '../logging/Logger';
+import PackageApps from './PackageApps';
+import StartupArguments from '../util/StartupArguments';
+import RemoteAppStartCommandGenerator from '../remoteAppCraft/RemoteAppStartCommandGenerator';
 
 class RemotePackager {
 
@@ -34,101 +30,40 @@ class RemotePackager {
     this.appsPath = path.resolve(__dirname, '../../app/remoteAppCraft/apps');
     this.preppedAppPaths = [];
 
-    this.appNames = {
-      InstallContainers: {
-        folderName: 'install-containers'
+    this.appInfo = {
+      ExportContainers: {
+        appName: 'export-containers',
+        folderName: 'export-containers'
       }
     };
   }
 
-  expectExists(resourcePath) {
-    if (!fs.existsSync(resourcePath)) {
-      throw new Error(`Was trying to find '${resourcePath}' but could not find it.`);
-    }
-  }
+  getExportScript() {
+    let commands = [];
 
-  getAppPath(appName) {
-    if (_.trim(appName) === '') {
-      throw new Error('App name cannot be blank or empty.');
-    }
+    commands.push('echo \'About to start container export ...\'');
 
-    const appPath = path.resolve(this.appsPath, appName);
+    const remoteAppStartCommandGenerator = new RemoteAppStartCommandGenerator(this.appInfo.ExportContainers.appName, this.vagMontStagAppsPath);
+    commands = commands.concat(remoteAppStartCommandGenerator.getInstallScriptCommands());
 
-    if (!fs.existsSync(appPath)) {
-      throw new Error(`Was trying to find app '${appName}' but could not find it. Looked in ${this.appsPath}. Not there.`);
-    }
+    logger.debug(`Comands S: ${JSON.stringify(commands)}`);
+    // `cd ${this.exportPath}; sudo ./e.sh`,
 
-    return appPath;
-  }
-
-  prepApp(appName) {
-    const appPath = this.getAppPath(appName);
-    const packageApp = new PackageApp(appPath);
-
-    return packageApp.package()
-      .then((outputPath) => {
-        this.preppedAppPaths.push(outputPath);
-        return Promise.resolve();
-      });
-  }
-
-  usherAppsToStaging() {
-    logger.debug(`About to expect exists: ${this.localStagingPath}`);
-
-    this.expectExists(this.localStagingPath);
-
-    const promises = [];
-
-    this.preppedAppPaths.forEach((filePath) => {
-      logger.debug(`About to expect prepped path exists: ${filePath}`);
-      this.expectExists(filePath);
-
-      const destPath = path.join(this.localExportAppsPath, path.basename(filePath));
-
-      if (fs.existsSync(destPath)) {
-        logger.debug(`Deleting ${destPath}`);
-        del.sync(destPath, { force: true });
-      }
-      logger.debug(`Copying ${filePath} to ${destPath}`);
-
-      const promise = new Promise((resolve, reject) => {
-        try {
-          fsExtra.copy(filePath, destPath, (error) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve();
-            }
-          });
-        } catch (error) {
-          logger.error(`Encountered error copying file: ${error.stack}`);
-          throw new Error(error);
-        }
-      });
-      promises.push(promise);
-    });
-
-    return Q.all(promises);
-  }
-
-  addApps() {
-    return this.prepApp(this.appNames.InstallContainers.folderName)
-    .then(() => {
-      logger.debug('About to usher apps to staging.');
-      return this.usherAppsToStaging();
-    });
+    return commands;
   }
 
   transferStep1(conn1) {
+    logger.debug('About to add apps.');
+    const packageApps = new PackageApps(this.appInfo, this.appsPath, this.localExportAppsPath, this.localStagingPath);
+    const promise = packageApps.package();
+
     logger.debug('Command array execution ready ...');
 
-    const commands = [
-      'echo \'About to start export ...\''
-    ];
-    // `cd ${this.exportPath}; sudo ./e.sh`,
+    const commands = this.getExportScript();
 
-    const remoteCommandExecutor = new RemoteCommandExecutor(conn1, commands);
-    remoteCommandExecutor.execute()
+    promise.then(() => {
+      const remoteCommandExecutor = new RemoteCommandExecutor(conn1, commands);
+      remoteCommandExecutor.execute()
       .then(() => {
         try {
           this.transferStep2(conn1);
@@ -140,31 +75,25 @@ class RemotePackager {
       .catch((error) => {
         throw new Error(error.stack);
       });
+    })
+    .catch((error) => {
+      logger.error(error.stack);
+    });
   }
 
   transferStep2(conn1) {
+    logger.debug('About to compose commands.');
+
     const podPath = path.join(this.vagrantMontrealExportPath, 'pods');
-    logger.debug('About to add apps.');
-    const promise = this.addApps();
+    const innerCommands = [
+      `sudo cp ${this.dockerComposePath}/docker-compose.yml ${podPath}` // Copy docker-compose.yml to staging
+    ];
 
-    promise.then(() => {
-      logger.debug('About to compose commands.');
-      const innerCommands = [
-        `sudo cp ${this.dockerComposePath}/docker-compose.yml ${this.stagingPath}`,//Copy docker-compose.yml to staging
-        `cd ${this.vagMontStagAppsPath}; cat *.tar | tar -xvf - -i`,
-        `ls ${podPath} -l`,
-        `cd ${this.vagMontStagAppsPath}/install-containers; npm install`
-      ];
-
-      logger.debug('About to attempt to connect again.');
-      const rExec = new RemoteCommandExecutor(conn1, innerCommands);
-      rExec.execute().then(() => {
-        conn1.end(); // close parent (and this) connection
-      });
-    })
-      .catch((error) => {
-        logger.error(error.stack);
-      });
+    logger.debug('About to attempt to connect again.');
+    const rExec = new RemoteCommandExecutor(conn1, innerCommands);
+    rExec.execute().then(() => {
+      conn1.end(); // close parent (and this) connection
+    });
   }
 
   package() {
@@ -183,7 +112,5 @@ class RemotePackager {
 }
 
 export default new RemotePackager();
-
-
 
 

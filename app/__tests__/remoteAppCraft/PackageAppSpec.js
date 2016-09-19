@@ -11,7 +11,7 @@ describe('Given the PackageAppSpec', () => {
 
     const packageApp = new PackageApp(folderPath);
 
-    const outputPath = packageApp.package();
+    const outputPath = packageApp.pack();
 
     console.log(outputPath);
 

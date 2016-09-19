@@ -5,16 +5,12 @@ import path from 'path';
 import del from 'del';
 import logger from '../logging/Logger';
 
-class PackageApp {
+class PackApp {
 
-  constructor(folderPath) {
+  constructor(folderPath, outputFolderPath) {
     this.folderPath = folderPath;
-    this.stagingPath = path.resolve(this.folderPath, '../../staging');
-  }
-
-  cleanStagingFolder() {
-    const globPath = path.join(this.stagingPath, '*'); // Removes files
-    del.sync([globPath]);
+    this.stagingPath = outputFolderPath;
+    // this.cleanStagingFolder();
   }
 
   cleanApp() {
@@ -22,9 +18,8 @@ class PackageApp {
     del.sync([globPath]);
   }
 
-  package() {
+  pack() {
     this.cleanApp();
-    this.cleanStagingFolder();
 
     const outputPath = path.join(this.stagingPath, `${path.basename(this.folderPath)}.tar`);
 
@@ -56,4 +51,4 @@ class PackageApp {
   }
 }
 
-export default PackageApp;
+export default PackApp;

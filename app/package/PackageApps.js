@@ -13,7 +13,7 @@ class PackageApps {
   constructor(appInfo, appsPath, localExportAppsPath, localStagingPath) {
     this.preppedAppPaths = [];
     this.appInfo = appInfo;
-    this.appsPath = appsPath;
+    this.appsHomePath = appsPath;
     this.localExportAppsPath = localExportAppsPath;
     this.localStagingPath = localStagingPath;
   }
@@ -23,10 +23,10 @@ class PackageApps {
       throw new Error('App name cannot be blank or empty.');
     }
 
-    const appPath = path.resolve(this.appsPath, appName);
+    const appPath = path.resolve(this.appsHomePath, appName);
 
     if (!fs.existsSync(appPath)) {
-      throw new Error(`Was trying to find app '${appName}' but could not find it. Looked in ${this.appsPath}. Not there.`);
+      throw new Error(`Was trying to find app '${appName}' but could not find it. Looked in ${this.appsHomePath}. Not there.`);
     }
 
     return appPath;

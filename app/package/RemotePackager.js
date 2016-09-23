@@ -27,7 +27,7 @@ class RemotePackager {
     this.vagrantMontrealStagingPath = path.join(this.vagrantMontrealExportPath, stagingFolderName);
     this.vagMontStagAppsPath = path.join(this.vagrantMontrealStagingPath, 'apps');
 
-    this.appsPath = path.resolve(__dirname, '../../app/remoteAppCraft/apps');
+    this.appsHomePath = path.resolve(__dirname, '../../app/remoteAppCraft/apps');
     this.preppedAppPaths = [];
 
     this.appInfo = {
@@ -36,6 +36,8 @@ class RemotePackager {
         folderName: 'export-containers'
       }
     };
+
+    this.podPath = path.join(this.vagrantMontrealExportPath, 'pods');
   }
 
   getExportScript() {
@@ -43,18 +45,21 @@ class RemotePackager {
 
     commands.push('echo \'About to start container export ...\'');
 
-    const remoteAppStartCommandGenerator = new RemoteAppStartCommandGenerator(this.appInfo.ExportContainers.appName, this.vagMontStagAppsPath);
-    commands = commands.concat(remoteAppStartCommandGenerator.getInstallScriptCommands());
+    const environmentVariables = [
+      { name: 'POD_PATH', value: this.podPath }
+    ];
 
-    logger.debug(`Comands S: ${JSON.stringify(commands)}`);
-    // `cd ${this.exportPath}; sudo ./e.sh`,
+    console.log(JSON.stringify(environmentVariables));
+
+    const remoteAppStartCommandGenerator = new RemoteAppStartCommandGenerator(this.appInfo.ExportContainers.appName, this.vagMontStagAppsPath, environmentVariables);
+    commands = commands.concat(remoteAppStartCommandGenerator.getInstallScriptCommands());
 
     return commands;
   }
 
   transferStep1(conn1) {
     logger.debug('About to add apps.');
-    const packageApps = new PackageApps(this.appInfo, this.appsPath, this.localExportAppsPath, this.localStagingPath);
+    const packageApps = new PackageApps(this.appInfo, this.appsHomePath, this.localExportAppsPath, this.localStagingPath);
     const promise = packageApps.package();
 
     logger.debug('Command array execution ready ...');

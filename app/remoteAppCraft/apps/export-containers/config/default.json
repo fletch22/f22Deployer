@@ -1,0 +1,9 @@
+{
+  "docker": {
+    "export": {
+      "staging": {
+        "relativePath": "/staging"
+      }
+    }
+  }
+}

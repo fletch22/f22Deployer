@@ -1,12 +1,14 @@
 import path from 'path';
+import _ from 'lodash';
 import StartupArguments from '../util/StartupArguments';
 
 class RemoteAppStartCommandGenerator {
 
-  constructor(appName, remoteAppsPath) {
+  constructor(appName, remoteAppsPath, environmentVariables) {
     this.appName = appName;
     this.remoteAppsPath = remoteAppsPath;
     this.remoteAppsExecutionPath = '/tmp';
+    this.environmentVariables = environmentVariables;
   }
 
   getInstallScriptCommands() {
@@ -34,11 +36,24 @@ class RemoteAppStartCommandGenerator {
     const npmrcPath = path.join(tmpAppPath, '.npmrc');
     commands.push(`sudo chmod 600 ${npmrcPath}`);
 
-    let optionalScript = '';
+    let optionalInstallScript = '';
     if (cleanInstall) {
-      optionalScript = ' npm install;';
+      optionalInstallScript = ' sudo npm install;'; // outputs STDERR to STDOUT.
     }
-    commands.push(`cd ${tmpAppPath}; ${optionalScript} npm start`);
+
+    let optionalEnvVariables = '';
+
+    console.log(JSON.stringify(this.environmentVariables));
+
+    if (this.environmentVariables) {
+      if (!_.isArray(this.environmentVariables)) {
+        throw new Error('Environment variables parameter not correct type.');
+      }
+      this.environmentVariables.forEach((envVar) => {
+        optionalEnvVariables += `${envVar.name}='${envVar.value}' `;
+      });
+    }
+    commands.push(`${optionalEnvVariables}; cd ${tmpAppPath}; ${optionalInstallScript} npm start`);
 
     return commands;
   }

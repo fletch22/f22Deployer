@@ -24,9 +24,11 @@ class RemoteCommandExecutor {
             this.rawCommandExecution(++this.currentCommandIndex);
           }
         }).on('data', (data) => {
-          console.log(`STDOUT: ${data}`);
+          // console.log(`STDOUT: ${data}`);
+          process.stdout.write(data);
         }).stderr.on('data', (data) => {
-          console.log(`STDERR: ${data}`);
+          // console.log(`STDERR: ${data}`);
+          process.stderr.write(data);
         });
       });
     } else {

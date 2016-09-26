@@ -1,19 +1,34 @@
 import { expect } from 'chai';
+import sinon from 'sinon';
 import remotePackager from '../../package/RemotePackager';
 
-describe('Given RemotePackager', () => {
+describe.only('Given RemotePackager', () => {
 
-  // it('When usherAppToStagin is called the files get copied to staging folder', () => {
-  //
-  //   remotePackager.stagingPath = path.join(__dirname, 'tmp');
-  //   remotePackager.usherAppsToStaging();
-  //
-  // });
+  let sandbox;
 
-  it('When packApp is called with a good name then it should succeed.', () => {
+  beforeEach(() => {
+    sandbox = sinon.sandbox.create();
+  });
 
-    remotePackager.prepApp('install-containers');
+  afterEach(() => {
+    sandbox.restore();
+  });
 
+  it('When packApp is called with a good name then it should succeed.', (done) => {
+    const testFileSender = sinon.stub(remotePackager, 'getFileSender', () => {
+      return {
+        send: (resolve) => {
+          resolve();
+        }
+      };
+    });
+
+    remotePackager.shuttleFiles()
+      .then(() => {
+        expect(testFileSender.calledOnce).equals(true);
+        done();
+      })
+      .catch(done);
   });
 
   it('When packApp is called with a bad name Then it should fail.', () => {

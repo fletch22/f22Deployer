@@ -11,7 +11,7 @@ class Logger {
 
   init() {
     Winston.emitErrs = true;
-    const logPath = path.join(__dirname, 'logs');
+    const logPath = path.join(__dirname, '../../', 'logging', 'logs');
     mkdirp(logPath);
 
     this.logger = new Winston.Logger({

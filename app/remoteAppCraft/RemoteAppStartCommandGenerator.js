@@ -1,19 +1,29 @@
 import path from 'path';
 import _ from 'lodash';
+import fs from 'fs';
+
 import StartupArguments from '../util/StartupArguments';
 
 class RemoteAppStartCommandGenerator {
 
-  constructor(appName, remoteAppsPath, environmentVariables) {
+  constructor(userId, appName, remoteAppsPath, environmentVariables) {
+    this.userId = userId;
     this.appName = appName;
     this.remoteAppsPath = remoteAppsPath;
     this.remoteAppsExecutionPath = '/tmp';
     this.environmentVariables = environmentVariables;
   }
 
-  getInstallScriptCommands() {
-    const commands = [];
+  convertStringToEnvironmentVariable(value) {
+    let result = value;
+    if (value && typeof value === 'string') {
+      result = `$'${value.replace(new RegExp('\'', 'g'), '\\\'')}'`;
+    }
 
+    return result;
+  }
+
+  install(commands, tmpAppsParentPath, tmpAppPath) {
     const cleanInstall = StartupArguments.wasArgumentUsed('installRemoteNodeApp');
     if (cleanInstall) {
       commands.push(`rm -rf ${this.remoteAppsPath}/${this.appName}`);
@@ -21,39 +31,47 @@ class RemoteAppStartCommandGenerator {
 
     commands.push(`cd ${this.remoteAppsPath}; cat *.tar | tar -xvf - -i`);
 
-    const baseFolderName = path.basename(this.remoteAppsPath);
-    const tmpAllAppsPath = path.join(this.remoteAppsExecutionPath, baseFolderName);
-
     if (cleanInstall) {
-      commands.push(`sudo rm -rf ${tmpAllAppsPath}`);
+      commands.push(`sudo rm -rf ${tmpAppsParentPath}`);
     }
 
     commands.push(`sudo cp -r ${this.remoteAppsPath}/ ${this.remoteAppsExecutionPath}`);
 
-    const tmpAppPath = path.join(tmpAllAppsPath, this.appName);
-    commands.push(`sudo chown -R f22:vagrant ${tmpAppPath}`);
+    commands.push(`sudo chown -R ${this.userId}: ${tmpAppPath}`);
 
     const npmrcPath = path.join(tmpAppPath, '.npmrc');
-    commands.push(`sudo chmod 600 ${npmrcPath}`);
 
-    let optionalInstallScript = '';
-    if (cleanInstall) {
-      optionalInstallScript = ' sudo npm install;'; // outputs STDERR to STDOUT.
+    if (fs.existsSync(npmrcPath)) {
+      commands.push(`sudo chmod 600 ${npmrcPath}`);
     }
 
-    let optionalEnvVariables = '';
+    if (cleanInstall) {
+      commands.push(`cd ${tmpAppPath};  sudo npm install;`);
+    }
+  }
 
-    console.log(JSON.stringify(this.environmentVariables));
+  getInstallScriptCommands() {
+    const commands = [];
 
+    const baseFolderName = path.basename(this.remoteAppsPath);
+    const tmpAllAppsPath = path.join(this.remoteAppsExecutionPath, baseFolderName);
+    const tmpAppPath = path.join(tmpAllAppsPath, this.appName);
+
+    this.install(commands, tmpAllAppsPath, tmpAppPath);
+
+    // Build
+    commands.push(`cd ${tmpAppPath}; sudo gulp`);
+
+    let envVarScript = '';
     if (this.environmentVariables) {
       if (!_.isArray(this.environmentVariables)) {
         throw new Error('Environment variables parameter not correct type.');
       }
       this.environmentVariables.forEach((envVar) => {
-        optionalEnvVariables += `${envVar.name}='${envVar.value}' `;
+        envVarScript += `export ${envVar.name}=${this.convertStringToEnvironmentVariable(envVar.value)}&& `;
       });
     }
-    commands.push(`${optionalEnvVariables}; cd ${tmpAppPath}; ${optionalInstallScript} npm start`);
+    commands.push(`cd ${tmpAppPath}; ${envVarScript} npm start`);
 
     return commands;
   }

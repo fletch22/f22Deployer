@@ -3,7 +3,8 @@ import babel from 'gulp-babel';
 
 gulp.task('scripts', () => gulp.src([
   './**/*.js',
-  '!./node_modules/**'
+  '!./node_modules/**',
+  '!./logging/logs/**'
 ]).pipe(babel())
   .pipe(gulp.dest('./dist/'))
 );

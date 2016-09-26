@@ -10,12 +10,13 @@ import logger from '../logging/Logger';
 
 class PackageApps {
 
-  constructor(appInfo, appsPath, localExportAppsPath, localStagingPath) {
+  constructor(appInfo, appsPath, localExportAppsPath, localStagingPath, sshConfig) {
     this.preppedAppPaths = [];
     this.appInfo = appInfo;
     this.appsHomePath = appsPath;
     this.localExportAppsPath = localExportAppsPath;
     this.localStagingPath = localStagingPath;
+    this.sshConfig = sshConfig;
   }
 
   getAppPath(appName) {
@@ -121,10 +122,11 @@ class PackageApps {
     });
 
     return Q.all(promises)
-      .then(() => {
-        logger.debug('About to usher apps to staging.');
-        return this.usherAppsToStaging();
-      });
+      .then(() => this.preppedAppPaths);
+      // .then(() => {
+      //   logger.debug('About to usher apps to staging.');
+      //   return this.usherAppsToStaging();
+      // });
   }
 }
 

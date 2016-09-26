@@ -1,6 +1,7 @@
-import scp2, { Client } from 'scp2';
 import moment from 'moment';
+import scp2, { Client } from 'scp2';
 import 'moment-precise-range-plugin';
+import pathExists from 'path-exists';
 import { Spinner } from 'cli-spinner';
 
 class FileSender {
@@ -10,7 +11,16 @@ class FileSender {
     this.client = new Client(this.sshConfig);
   }
 
+  ensureFolderExists(folder) {
+    if (!pathExists.sync(folder)) {
+      throw new Error(`Directory ${folder} does not exist! Cannot proceed.`);
+    }
+  }
+
   send(resolve, reject, folderWithContentsToSend) {
+
+    this.ensureFolderExists(folderWithContentsToSend);
+
     const start = moment();
 
     let spinner = new Spinner('Connecting %s    ');

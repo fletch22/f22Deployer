@@ -71,7 +71,7 @@ class Index {
 
     logger.info('About to start exporting Docker containers ...');
 
-    const containers = ['consul-server-f22']; //, 'webapp-f22', 'registrator-f22', 'nginx-f22'];
+    const containers = ['consul-server-f22', 'webapp-f22', 'registrator-f22', 'nginx-f22'];
 
     containers.forEach((containerName) => {
       const exportPath = path.join(this.stagingPath, `${containerName}.tar`);

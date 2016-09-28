@@ -1,18 +1,12 @@
 import 'moment-precise-range-plugin';
 import path from 'path';
 import { Client as SshClient } from 'ssh2';
-import _ from 'lodash';
-import fs from 'fs';
-import del from 'del';
-import fsExtra from 'fs-extra';
-import Q from 'q';
 import Config from '../config/config.js';
 import RemoteCommandExecutor from '../RemoteCommandExecutor';
 import logger from '../logging/Logger';
 import PackageApps from './PackageApps';
 import RemoteAppStartCommandGenerator from '../remoteAppCraft/RemoteAppStartCommandGenerator';
-import FileSender from '../sender/FileSender';
-import fileSystem from '../util/FileSystem';
+import Shuttler from '../shuttler/Shuttler';
 
 class RemotePackager {
 
@@ -39,10 +33,8 @@ class RemotePackager {
     this.podPath = Config.podPath.remote;
   }
 
-  getExportScript() {
+  getStartupScript() {
     let commands = [];
-
-    commands.push('echo \'About to start container export ...\'');
 
     const remoteStartConfig = {
       podName: Config.podName,
@@ -55,93 +47,10 @@ class RemotePackager {
       { name: 'APP_CONFIG', value: remoteConfig }
     ];
 
-    logger.info(`PodPath: ${this.podPath}`);
-
     const remoteAppStartCommandGenerator = new RemoteAppStartCommandGenerator(this.sshConfig.username, this.appInfo.ExportContainers.appName, this.vagMontStagAppsPath, environmentVariables);
     commands = commands.concat(remoteAppStartCommandGenerator.getInstallScriptCommands());
 
     return commands;
-  }
-
-  getFileSender() {
-    const shuttleConfig = _.cloneDeep(this.sshConfig);
-    shuttleConfig.path = this.vagMontStagAppsPath;
-
-    return new FileSender(shuttleConfig);
-  }
-
-  shuttleFilesX() {
-    return new Promise((resolve, reject) => {
-      this.getFileSender().send(resolve, reject, this.localExportAppsPath);
-    });
-  }
-
-  shuttleFiles(preppedPaths) {
-    const self = this;
-    logger.debug(`About to expect exists: ${this.localStagingPath}`);
-
-    const promises = [];
-
-    try {
-      fileSystem.expectExists(this.localStagingPath);
-    } catch (error) {
-      promises.push(Promise.reject(error));
-    }
-
-    _.each(preppedPaths, (filePath) => {
-      logger.debug(`FP: ${filePath}`);
-      let destPath;
-
-      // try {
-      //   logger.debug(`About to expect prepped path exists: ${filePath}`);
-      //   fileSystem.expectExists(filePath);
-      //
-      //   logger.debug(`Packaging path for file: ${path.basename(filePath)}`);
-      //   logger.debug(`About to create destination path using ${self.localExportAppsPath}`);
-      //
-      //   destPath = path.join(self.localExportAppsPath, path.basename(filePath));
-      //
-      //   logger.debug(`Created new destination path. ${destPath}`);
-      //
-      //   if (fs.existsSync(destPath)) {
-      //     logger.debug(`Deleting ${destPath}`);
-      //     del.sync(destPath, { force: true });
-      //   }
-      //
-      //   logger.debug(`Copying ${filePath} to ${destPath}`);
-      // } catch (error) {
-      //   promises.push(Promise.reject(error));
-      //   return false;
-      // }
-      //
-      // const promise = new Promise((resolve, reject) => {
-      //   try {
-      //     fsExtra.copy(filePath, destPath, (error) => {
-      //       if (error) {
-      //         reject(error);
-      //       } else {
-      //         resolve();
-      //       }
-      //     });
-      //   } catch (error) {
-      //     logger.error(`Encountered error copying file: ${error.stack}`);
-      //     throw new Error(error);
-      //   }
-      // });
-
-      const promise = new Promise((resolve, reject) => {
-
-        // Change to promise but remote execute code that will create the destination folder first.
-        throw new Error('Not yet implemented');
-
-        this.getFileSender().send(resolve, reject, filePath);
-      });
-      promises.push(promise);
-
-      return true;
-    });
-
-    return Q.all(promises);
   }
 
   transferStep1(conn1) {
@@ -149,11 +58,10 @@ class RemotePackager {
     const packageApps = new PackageApps(this.appInfo, this.appsHomePath, this.localExportAppsPath, this.localStagingPath, this.sshConfig);
     const promise = packageApps.package();
 
-    logger.debug('Command array execution ready ...');
-
-    promise.then((preppedPaths) => this.shuttleFiles(preppedPaths))
+    const shuttler = new Shuttler(this.sshConfig, this.vagMontStagAppsPath);
+    promise.then((preppedPaths) => shuttler.shuttleFiles(preppedPaths, conn1))
     .then(() => {
-      const commands = []; //this.getExportScript();
+      const commands = this.getStartupScript();
       const remoteCommandExecutor = new RemoteCommandExecutor(conn1, commands);
       remoteCommandExecutor.execute()
       .then(() => {

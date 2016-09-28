@@ -46,7 +46,7 @@ class RemoteAppStartCommandGenerator {
     }
 
     if (cleanInstall) {
-      commands.push(`cd ${tmpAppPath};  sudo npm install;`);
+      commands.push(`cd ${tmpAppPath}; sudo npm install;`);
     }
   }
 

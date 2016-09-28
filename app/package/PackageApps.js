@@ -51,64 +51,64 @@ class PackageApps {
       });
   }
 
-  usherAppsToStaging() {
-    const self = this;
-    logger.debug(`About to expect exists: ${this.localStagingPath}`);
-
-    const promises = [];
-
-    try {
-      fileSystem.expectExists(this.localStagingPath);
-    } catch (error) {
-      promises.push(Promise.reject(error));
-    }
-
-    _.each(this.preppedAppPaths, (filePath) => {
-      let destPath;
-
-      try {
-        logger.debug(`About to expect prepped path exists: ${filePath}`);
-        fileSystem.expectExists(filePath);
-
-        logger.debug(`Packaging path for file: ${path.basename(filePath)}`);
-        logger.debug(`About to create destination path using ${self.localExportAppsPath}`);
-
-        destPath = path.join(self.localExportAppsPath, path.basename(filePath));
-
-        logger.debug(`Created new destination path. ${destPath}`);
-
-        if (fs.existsSync(destPath)) {
-          logger.debug(`Deleting ${destPath}`);
-          del.sync(destPath, { force: true });
-        }
-
-        logger.debug(`Copying ${filePath} to ${destPath}`);
-      } catch (error) {
-        promises.push(Promise.reject(error));
-        return false;
-      }
-
-      const promise = new Promise((resolve, reject) => {
-        try {
-          fsExtra.copy(filePath, destPath, (error) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve();
-            }
-          });
-        } catch (error) {
-          logger.error(`Encountered error copying file: ${error.stack}`);
-          throw new Error(error);
-        }
-      });
-      promises.push(promise);
-
-      return true;
-    });
-
-    return Q.all(promises);
-  }
+  // usherAppsToStaging() {
+  //   const self = this;
+  //   logger.debug(`About to expect exists: ${this.localStagingPath}`);
+  //
+  //   const promises = [];
+  //
+  //   try {
+  //     fileSystem.expectExists(this.localStagingPath);
+  //   } catch (error) {
+  //     promises.push(Promise.reject(error));
+  //   }
+  //
+  //   _.each(this.preppedAppPaths, (filePath) => {
+  //     let destPath;
+  //
+  //     try {
+  //       logger.debug(`About to expect prepped path exists: ${filePath}`);
+  //       fileSystem.expectExists(filePath);
+  //
+  //       logger.debug(`Packaging path for file: ${path.basename(filePath)}`);
+  //       logger.debug(`About to create destination path using ${self.localExportAppsPath}`);
+  //
+  //       destPath = path.join(self.localExportAppsPath, path.basename(filePath));
+  //
+  //       logger.debug(`Created new destination path. ${destPath}`);
+  //
+  //       if (fs.existsSync(destPath)) {
+  //         logger.debug(`Deleting ${destPath}`);
+  //         del.sync(destPath, { force: true });
+  //       }
+  //
+  //       logger.debug(`Copying ${filePath} to ${destPath}`);
+  //     } catch (error) {
+  //       promises.push(Promise.reject(error));
+  //       return false;
+  //     }
+  //
+  //     const promise = new Promise((resolve, reject) => {
+  //       try {
+  //         fsExtra.copy(filePath, destPath, (error) => {
+  //           if (error) {
+  //             reject(error);
+  //           } else {
+  //             resolve();
+  //           }
+  //         });
+  //       } catch (error) {
+  //         logger.error(`Encountered error copying file: ${error.stack}`);
+  //         throw new Error(error);
+  //       }
+  //     });
+  //     promises.push(promise);
+  //
+  //     return true;
+  //   });
+  //
+  //   return Q.all(promises);
+  // }
 
   package() {
     const promises = [];
@@ -123,10 +123,6 @@ class PackageApps {
 
     return Q.all(promises)
       .then(() => this.preppedAppPaths);
-      // .then(() => {
-      //   logger.debug('About to usher apps to staging.');
-      //   return this.usherAppsToStaging();
-      // });
   }
 }
 

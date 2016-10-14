@@ -12,7 +12,6 @@ class RemoteInstaller {
 
   constructor(podInfo) {
     this.sshConfig = Config.ServerInfo.SshConfig.DigitalOcean;
-    // this.remotePath = path.join(this.sshConfig.path, 'pods');
 
     console.log(`Got this far....${podInfo.containers.length}`);
     this.podInfo = podInfo;
@@ -30,46 +29,6 @@ class RemoteInstaller {
     };
   }
 
-  // import StartupArguments from '../util/StartupArguments';
-  // getRemoteAppInstallScriptCommands() {
-  //   const commands = [];
-  //   const appName = 'install-containers';
-  //
-  //   const cleanInstall = StartupArguments.wasArgumentUsed('installRemoteNodeApp');
-  //   if (cleanInstall) {
-  //     commands.push(`rm -rf ${this.vagMontStagAppsPath}/${appName}`);
-  //   }
-  //
-  //   commands.push(`cd ${this.vagMontStagAppsPath}; cat *.tar | tar -xvf - -i`);
-  //
-  //   let optionalScript = '';
-  //   if (cleanInstall) {
-  //     optionalScript = ' npm install;';
-  //   }
-  //   commands.push(`cd ${this.vagMontStagAppsPath}/${appName}; ${optionalScript} npm start`);
-  //
-  //   return commands;
-  // }
-  //
-  // shuttlePackage() {
-  //   const promise = new Promise((resolve, reject) => {
-  //     const commands = [`mkdir -p ${this.vagMontStagAppsPath}`];
-  //
-  //     const remoteCommandExecutor = new RemoteCommandExecutor(connection, commands);
-  //     remoteCommandExecutor.execute()
-  //       .then(() => {
-  //         try {
-  //           this.getFileSender().send(resolve, reject, filePath);
-  //         } catch (error) {
-  //           logger.error(error.stack);
-  //         }
-  //       })
-  //       .catch((error) => {
-  //         throw new Error(error.stack);
-  //       });
-  //   });
-  // }
-
   transferFiles(connection) {
     const shuttler = new Shuttler(this.sshConfig, this.remoteAppsPath);
 
@@ -81,8 +40,8 @@ class RemoteInstaller {
           `ls ${this.remoteAppsPath}`
         ];
 
-        // const remoteAppStartCommandGenerator = new RemoteAppStartCommandGenerator(this.sshConfig.username, this.appInfo.ExportContainers.appName, this.remoteAppsPath);
-        // commands = commands.concat(remoteAppStartCommandGenerator.getInstallScriptCommands());
+        const remoteAppStartCommandGenerator = new RemoteAppStartCommandGenerator(this.sshConfig.username, this.appInfo.ExportContainers.appName, this.remoteAppsPath);
+        commands = commands.concat(remoteAppStartCommandGenerator.getInstallScriptCommands());
 
         const remoteCommandExecutor = new RemoteCommandExecutor(connection, commands);
         remoteCommandExecutor.execute().then(() => {

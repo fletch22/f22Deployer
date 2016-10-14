@@ -1,0 +1,64 @@
+version: '2'
+services:
+    webapp-f22:
+      container_name: webapp-f22
+      mem_limit: 2000000000
+      image: webapp-f22
+      ports:
+       - "58888:8888"
+      depends_on:
+       - registrator
+      dns:
+       - $\{BRIDGE_IP}
+       - 8.8.8.8
+      dns_search: service.consul
+    registrator:
+      container_name: registrator-f22
+      image: gliderlabs/registrator:latest
+      command:
+       - consul://$\{PUBLIC_IP}:8500
+      network_mode: "host"
+      volumes:
+        - /var/run/docker.sock:/tmp/docker.sock
+      depends_on:
+        - consul-server
+      dns:
+       - $\{BRIDGE_IP}
+       - 8.8.8.8
+      dns_search: service.consul
+    consul-server:
+      container_name: consul-server-f22
+      image: consul
+      ports:
+       - "$\{BRIDGE_IP}:53:8600/tcp"
+       - "$\{BRIDGE_IP}:53:8600/udp"
+       - "$\{PUBLIC_IP}:8500:8500"
+      environment:
+      - 'CONSUL_LOCAL_CONFIG={"skip_leave_on_interrupt": true}'
+      network_mode: "bridge"
+      volumes:
+       - {consulSharedDataPath}:/consul/data
+      command:
+       - agent
+       - -server
+       - -advertise=$\{PUBLIC_IP}
+       - -bootstrap
+       - -ui
+       - -client=0.0.0.0
+       - -recursor=8.8.8.8
+    nginx:
+      container_name: nginx-f22
+      image: nginx-f22
+      network_mode: "host"
+      depends_on:
+        - registrator
+      ports:
+        - "80:80"
+      dns:
+       - $\{BRIDGE_IP}
+       - 8.8.8.8
+      dns_search: service.consul
+      entrypoint: nginx
+      command:
+        - -g
+        - "daemon off;"

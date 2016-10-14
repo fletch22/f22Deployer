@@ -55,7 +55,8 @@ const Config = {
         port: '22',
         privateKey: fs.readFileSync('/Users/fletch22/.ssh/id_rsa', 'utf-8'), // Passing as buffer does not work. FileSync is not creating an object recognized as a buffer.
         forceIPv4: true,
-        tryKeyboard: false
+        tryKeyboard: false,
+        sharedDataPath: '/var/docker-data'
       }
     }
   }

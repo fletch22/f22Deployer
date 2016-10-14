@@ -34,13 +34,14 @@ class Index {
 
     const podFilePath = path.join(this.podPath, this.podName);
     logger.info(`About to pack to pod: ${podFilePath}`);
-    const script = `tar -zcvf ${podFilePath} ${this.stagingPath}`;
+    const script = `tar -zcvf ${podFilePath} -C ${this.stagingPath} .`;
 
     logger.info(`About to execute ${script}`);
     if (shell.exec(script).code !== 0) {
-      throw new Error(`Could not pack ${this.stagingPath}.`);
+      throw new Error(`Could not pack ${this.stagingPath} to ${podFilePath}.`);
+    } else {
+      logger.info(`Finished packing to pod ${podFilePath}`);
     }
-    logger.info('Finished packing to pod.');
   }
 
   execScript(script, prefixMessage, errorMessage) {

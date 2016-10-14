@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node ./dist/index.js",
-    "startTest": "gulp",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "preinstall": "sudo npm i -g gulp"
+    "gulp": "gulp",
+    "startTest": "./node_modules/gulp",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Fletch22.com",
   "license": "UNLICENSED",

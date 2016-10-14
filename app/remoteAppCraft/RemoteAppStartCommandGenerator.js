@@ -32,21 +32,21 @@ class RemoteAppStartCommandGenerator {
     commands.push(`cd ${this.remoteAppsPath}; cat *.tar | tar -xvf - -i`);
 
     if (cleanInstall) {
-      commands.push(`sudo rm -rf ${tmpAppsParentPath}`);
+      commands.push(`rm -rf ${tmpAppsParentPath}`);
     }
 
-    commands.push(`sudo cp -r ${this.remoteAppsPath}/ ${this.remoteAppsExecutionPath}`);
+    commands.push(`cp -r ${this.remoteAppsPath}/ ${this.remoteAppsExecutionPath}`);
 
-    commands.push(`sudo chown -R ${this.userId}: ${tmpAppPath}`);
+    commands.push(`chown -R ${this.userId}: ${tmpAppPath}`);
 
     const npmrcPath = path.join(tmpAppPath, '.npmrc');
 
     if (fs.existsSync(npmrcPath)) {
-      commands.push(`sudo chmod 600 ${npmrcPath}`);
+      commands.push(`chmod 600 ${npmrcPath}`);
     }
 
     if (cleanInstall) {
-      commands.push(`cd ${tmpAppPath}; sudo npm install;`);
+      commands.push(`cd ${tmpAppPath}; npm --cache-min 9999999 install;`);
     }
   }
 
@@ -60,11 +60,11 @@ class RemoteAppStartCommandGenerator {
     this.install(commands, tmpAllAppsPath, tmpAppPath);
 
     // Build
-    commands.push(`cd ${tmpAppPath}; sudo gulp`);
+    commands.push(`cd ${tmpAppPath}; npm run gulp`);
 
     let envVarScript = '';
     if (this.environmentVariables) {
-      if (!_.isArray(this.environmentVariables)) {
+      if (!Array.isArray(this.environmentVariables)) {
         throw new Error('Environment variables parameter not correct type.');
       }
       this.environmentVariables.forEach((envVar) => {

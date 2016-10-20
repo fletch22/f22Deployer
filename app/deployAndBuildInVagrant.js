@@ -19,7 +19,7 @@ const conn1 = new SshClient();
 conn1.on('ready', () => {
   console.log('Command array execution ready ...');
 
-  const dockerComposePath = '/vagrant/workspaces/docker/docker-compose';
+  const dockerComposePath = '/vagrant/workspaces/docker/docker-compose/prod';
 
   let commands = [
     `cd ${dockerComposePath}; docker-compose stop`,
@@ -39,9 +39,9 @@ conn1.on('ready', () => {
     deployer.deploy().then(() => {
       commands = [
         `cd ${sshConfig.path} && tar -xmf ${remoteShippingPackageFilePath}`,
-        'docker rmi -f f22website',
+        'docker rmi -f webapp-f22',
         `cd ${dockerComposePath}; docker-compose rm -f`,
-        `cd ${dockerComposePath}; ./dc.sh`
+        `cd ${dockerComposePath}; ./dcu.sh`
       ];
 
       new RemoteCommandExecutor(conn1, commands).execute().then(() => {

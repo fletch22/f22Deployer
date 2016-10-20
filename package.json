@@ -6,7 +6,7 @@
   "scripts": {
     "b": "rimraf ./dist; babel ./app -d ./dist",
     "start": "gulp",
-    "buildernpm ": "node ./dist/deployAndBuildInVagrant.js",
+    "buildApp": "node ./dist/deployAndBuildInVagrant.js",
     "packager": "node ./dist/package/package-pod.js",
     "bp": "npm run buildApp; npm run packager -- installRemoteNodeApp",
     "sender": "node ./dist/sender/send-pod-to-prod.js",

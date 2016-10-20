@@ -32,7 +32,7 @@ class RemoteAppStartCommandGenerator {
     commands.push(`cd ${this.remoteAppsPath}; cat *.tar | tar -xvf - -i`);
 
     if (cleanInstall) {
-      commands.push(`rm -rf ${tmpAppsParentPath}`);
+      commands.push(`sudo rm -rf ${tmpAppsParentPath}`);
     }
 
     commands.push(`cp -r ${this.remoteAppsPath}/ ${this.remoteAppsExecutionPath}`);
